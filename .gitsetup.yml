@@ -1,0 +1,4 @@
+---
+remotes:
+  primary: git@github.com:destructuring/adhoc
+  secondary: git@bitbucket.org:destructuring/adhoc
