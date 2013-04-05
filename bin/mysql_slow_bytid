@@ -1,0 +1,67 @@
+#!/bin/bash
+
+set -efu
+
+tid="$1"; shift
+
+state="START"; 
+acc=
+fl_show=
+
+grep -B 1 -A 30  "^# Thread_id: ${tid} " /db/mysql/log/slow_query.log | while read -r a; do 
+  set -- $a
+  if [[ "$#" = 0 ]]; then
+    continue
+  fi
+  case "$1" in
+    \#)
+      case "$state" in
+        END)
+          acc=
+          fl_show=
+          state="START"
+          acc="${acc}${a}\n"
+          ;;
+        START)
+          if [[ "$2" = "Query_time:" && $9 > 0 ]]; then
+            fl_show=1
+            echo -e "$acc"
+          else
+            acc="${acc}${a}"
+          fi
+
+          if [[ -n "$fl_show" ]]; then
+            echo "$a"
+          fi
+          ;;
+        QUERY)
+          state="GARBAGE"
+          ;;
+      esac
+      ;;
+    --)
+      state="END"
+      if [[ -n "$fl_show" ]]; then
+        echo "$a"
+        acc=
+      fi
+      ;;
+    *)
+      case "$state" in
+        START)
+          state="QUERY"
+          if [[ -n "$fl_show" ]]; then
+            echo "$a"
+          fi
+          ;;
+        QUERY)
+          if [[ -n "$fl_show" ]]; then
+            echo "$a"
+          fi
+          ;;
+      esac
+      ;;
+  esac
+done
+
+# Query_time: 2.829743  Lock_time: 0.000110  Rows_sent: 1  Rows_examined: 0
